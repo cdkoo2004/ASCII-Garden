@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
+<title>Pocket Garden</title>
+<style>
+:root{--bg:#3e7749;--ink:#22301f;--muted:#a1da8b;--panel:#dddb9e;--line:#cfd8c8;--accent:#8bb687;--accent-ink:#9c5252;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a12;--ink:#6e9058;--muted:#9fb096;--panel:#1d261b;--line:#c2debb;--accent:#7cc274;--accent-ink:#10200d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141a12;--muted:#44503d;--panel:#e1e7df;--line:#334030;--accent:#7cc274;--accent-ink:#10200d;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--muted);font-family:"Doto",Georgia,serif;font-size:1.05rem;display:flex;flex-direction:column;gap:10px;padding:12px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:1.4rem;margin:0;font-weight: 610; font-style: italic; color: #a1da8b;}
+#status{color:var(--muted);font-size:.95rem;margin:0}
+#garden{position:relative;flex:1;min-height:260px;overflow:hidden;  solid var(--line);cursor:crosshair;touch-action:manipulation;user-select:none;-webkit-user-select:none;
+background-color:#81b45c;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='.33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 0 .55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),radial-gradient(ellipse 55% 40% at 62% -5%,rgba(198, 205, 113, 0.95),rgba(255,255,255,0) 72%),radial-gradient(circle 38vmax at 92% 28%,rgba(140,190,225,.9),rgba(140,190,225,0) 70%),radial-gradient(ellipse 40% 35% at 6% 52%,rgba(215,232,238,.95),rgba(215,232,238,0) 75%),radial-gradient(circle 28vmax at 38% 62%,rgba(205,235,110,.95),rgba(205,235,110,0) 72%),radial-gradient(ellipse 30% 28% at 8% 88%,rgba(115,165,205,.7),rgba(115,165,205,0) 75%),radial-gradient(ellipse 95% 38% at 62% 108%,#2b6531,rgba(43,101,49,0) 80%);background-blend-mode:overlay,normal,normal,normal,normal,normal,normal}
+#garden.erasing{cursor:not-allowed}
+.sun{position:absolute;top:6%;right:8%;width:54px;height:54px;border-radius:50%;background:#ffe27a;box-shadow:0 0 40px 14px rgba(255,226,122,.55);pointer-events:none}
+.item{position:absolute;pointer-events:none;line-height:1;transform:translate(-50%,-100%)}
+.item.fly{transform:translate(-50%,-50%)}
+.item span{display:block;white-space:pre;font-family:"DejaVu Sans Mono",Menlo,Consolas,monospace;line-height:1;letter-spacing:0;color:var(--c,#e0568a);transform-origin:50% 100%;animation:pop .35s cubic-bezier(.3,1.6,.5,1) both,sway var(--d,4s) ease-in-out var(--l,0s) infinite alternate;}
+.item.fly span{animation:pop .35s both,drift var(--d,3s) ease-in-out var(--l,0s) infinite alternate}
+#garden.erasing .item{pointer-events:auto}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes sway{from{transform:rotate(8deg)}to{transform:rotate(3deg)}}
+@keyframes drift{from{transform:translate(-8px,-6px) rotate(-6deg)}to{transform:translate(8px,6px) rotate(6deg)}}
+@keyframes glow{
+  0%{filter:drop-shadow(0 0 0 var(--c))}
+  30%{filter:drop-shadow(0 0 8px var(--c)) drop-shadow(0 0 20px var(--c))}
+  100%{filter:drop-shadow(0 0 0 transparent)}
+}
+#ghost{opacity:.5;display:none;z-index:99999}
+#ghost span{animation:none}
+@media (prefers-reduced-motion:reduce){.item span{animation:pop .01s both!important}}
+nav{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;background:#1a130c;border:1px ;border-radius;padding:5px}
+button{font:inherit;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:1px;cursor:pointer;min-width:44px;min-height:44px;padding:4px 10px}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.tool{font-size:1.6rem;line-height:1}
+button[aria-pressed="true"]{background:black;color:var(--accent-ink);border-color:var(--accent)}
+/* Erase, Undo, Clear */
+button:not(.tool) {
+  color: #a1da8b;                 /* text color */
+  background: #2b2116;            /* fill color */
+  border: 1px solid #5a4630;      /* outline color */
+}
+button:not(.tool):hover {
+  background: #3d2f20;            /* hover color */
+}
+
+/* Erase when it's toggled on */
+button:not(.tool)[aria-pressed="true"] {
+  background: #020101;
+  color: #ffffff;
+  border-color: #020202;
+}
+.swatch{position:relative;display:block;width:46px;height:46px;filter:drop-shadow(0 0 1px rgba(0,0,0,.65)) drop-shadow(0 0 .5px rgba(0,0,0,.4))}
+.swatch span{position:absolute;left:50%;top:50%;white-space:pre;font:10px/10px "DejaVu Sans Mono",Menlo,Consolas,monospace;letter-spacing:0;color:var(--c);transform-origin:50% 50%}
+</style>
+</head>
+<body>
+<header>
+  <h1>ASCII Garden</h1>
+  <p id="status" aria-live="polite">Pick a color, then click the garden to plant a flower.</p>
+</header>
+<main id="garden" aria-label="Garden. Click to place the selected item.">
+  <div id="ghost" class="item"><span></span></div>
+</main>
+<nav aria-label="Garden tools" id="bar"></nav>
+
+<script>
+const HORIZON = 0.36; // matches the gradient stop: below this line is soil
+// ASCII (braille) flower art. Add more art strings here and reference them in TOOLS.
+const FLOWER = `⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⢀⠔⠋⠙⡄⠀⠀⢸⠑⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢰⠉⣥⢀⣈⣿⣠⣯⡤⡇⠀⠀⠈⢺⡇⣠⢶⡿⡄⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⡇⠈⣿⡟⣘⣟⠋⠀⠈⡄⠀⠀⠈⡿⡟⠘⢀⠆⠀⠀⢠⠎⠈⠳⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢔⠻⠦⢿⡿⣿⡍⠉⠉⢀⠇⠀⣀⠀⠸⣿⡉⢁⡠⠤⠤⢧⡀⣇⢀⡵⠤⠤⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠈⠒⠚⢇⢹⠷⣤⣖⡁⠀⡰⠁⢀⠙⠎⢻⣾⠀⠠⣄⣀⢻⣿⣾⢀⣠⡄⠀⡜⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⣤⣤⣤⡀⠀⠈⠢⡰⠁⠈⠙⡓⠧⣤⠸⣦⡏⠁⢘⣧⡀⣀⣩⣿⣹⣹⣯⣀⢀⡔⠁⠀⠀⠀⠀⠀⠀⠀⠀
+⡠⢢⠀⠀⠙⢍⣉⠷⢤⣤⡀⢤⣴⣆⠀⢠⣄⣈⣷⣿⢷⡖⠙⡏⠉⠉⠟⢿⠿⡟⠙⠉⠉⢱⣄⡀⠀⠀⠀⠀⠀⠀⠀
+⠑⠚⠒⠒⠒⠒⣒⡿⠛⠋⠉⠀⠀⠈⢦⠀⢀⣨⣿⣤⣿⣿⣽⡷⠶⢖⠒⠉⠀⠉⠒⠒⠒⠚⠓⠢⢕⠂⠄⣀⠀⠀⠀
+⠀⠀⠀⠀⣜⣁⡇⠀⠀⠀⠀⠀⠀⠀⠀⠛⠋⠱⠛⠳⠘⣅⣀⠤⠤⠚⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠢⠄⡉⢄⠀
+⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠧⠤⠔⠊⠑⠒⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠺⢦`;
+
+const FLOWER2 = `⠀⠀⠀⠀⠀⠀⡤⡀⠠⡀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢀⠆⣸⠃⠊⠭⠂⣠⠀
+⠀⠀⠀⠀⢠⠃⡐⠃⠀⠀⠀⡌⠱⡀
+⠀⠀⠀⠀⠰⡀⡄⠀⠀⠀⡜⢀⠒⠁
+⠀⠀⠀⠀⠀⢈⡟⢔⠒⣈⠔⠁⠀⠀
+⠀⠀⠀⠀⠀⡼⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠰⠇⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⢰⠀⠀⢀⢱⠀⠀⠀⠀⠀
+⠶⡤⠄⡀⢸⠀⣠⢊⡌⠀⠀⠀⠀⠀
+⠀⠈⠄⠈⢢⠊⡡⠋⠀⠀⠀⠀⠀⠀
+⠀⠀⠸⠀⠀⢠⠁⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠡⡈⢜⡀⣀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠈⠒⠓⠃⠀⠀⠀⠀⠀⠀`;
+
+const FLOWER3 = `⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⣿⡀⠀⠀⢀⡀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⡷⢤⠀⡚⠉⠆⣤⢜⣬⢑⣰⡠⠁⠓⡀⣠⣾⠀⠀⠀⠀
+⠀⠀⠀⡎⠁⠸⡀⠀⠸⢙⣿⣫⡿⡝⠃⠀⢀⡆⠀⢁⠀⠀⠀⠀
+⣤⠤⡄⢌⢄⠀⢻⣦⢐⠘⡖⠁⠻⢇⢆⡼⡟⠀⢠⠡⠤⡤⣄⠄
+⠈⠛⠄⠀⠙⠗⠔⡀⢨⠑⣻⡀⡞⢙⠄⢀⡃⠴⠁⢀⠀⠺⠁⠀
+⠀⠀⢀⡤⣷⣤⡤⠌⠐⠋⡱⠚⢊⠙⠒⠁⢤⡴⣶⠁⡁⠀⠀⠀
+⠀⠘⠻⡟⣷⠓⣿⠼⠟⢋⠀⠀⠀⠹⠓⠮⣿⢚⣷⡻⠿⠓⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`;
+
+const FLOWER4 = `⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠴⠂⠀⠐⠒⠤⢀⣀⢀⡤⢤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡠⠋⢀⡄⠀⠀⠀⣠⠊⠀⠀⠀⠀⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⠃⠀⡜⠀⠀⠀⢰⠁⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠃⠀⢀⠃⠀⠀⠀⡇⠀⡆⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡌⠀⠀⢸⠀⠀⠀⢠⠀⢰⢀⠀⠀⠀⠀⠘⠀⠀⡠⠐⠈⠉⠀⠀⠈⠉⠐⢤⡀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠀⠀⣀⡀⠀⢠⡇⠀⠀⢸⠀⠀⠀⢸⠁⡜⠸⠀⠀⠀⠀⢸⡠⠊⠀⠀⠀⠀⠀⠀⢀⣀⣀⠀⠙⡄⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⣔⡉⠴⠆⣠⡤⣈⠑⢺⠀⠀⠀⢈⡀⠀⠀⡘⠀⡇⡄⠀⠀⠀⠀⢸⠀⠀⠀⠀⣀⣔⠮⠝⠒⠊⠉⠛⢳⡃⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢠⠃⠀⠀⠀⠰⣏⢻⠋⠾⡆⠀⠀⠹⣌⢢⣸⣏⡆⡇⡇⠀⠀⠀⠀⡌⠀⢀⣴⡪⠋⠁⠀⢀⠤⠒⠉⡡⠄⠚⠒⣆
+⠀⠀⠀⠀⠀⠀⠀⣠⠏⠒⠒⠠⢤⣀⠈⠚⢧⣄⢣⠀⢀⣀⠈⢻⡃⠘⡇⣇⠇⠀⠀⠀⢠⠃⠀⡩⠋⠀⠀⡠⠚⠁⠀⣠⠚⠢⠤⠤⠒⠁
+⠀⠀⠀⢰⡲⣒⠈⠑⠒⠂⠤⠄⢠⠤⣍⠒⠤⡙⢿⣆⠘⡌⠉⣷⢻⡀⣿⠸⠁⠀⠀⠀⡌⢀⠞⠀⠀⢀⠎⠀⠀⢀⠞⠁⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠉⠒⠷⢆⠀⠀⠀⠀⠀⠓⠶⠵⢤⣈⡑⠝⢷⣽⡄⢿⣟⣷⢻⠀⠀⠀⡠⠎⣀⠬⠤⠤⢄⡀⠀⢀⡴⠃⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠑⣤⡠⠔⠒⣒⣀⡒⠒⢏⣻⣷⣦⣽⣿⣎⢿⡝⣿⣧⠀⡜⡵⠋⠀⠀⠀⠀⠀⠈⠙⢍⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⢀⠤⠒⢉⡡⠔⠚⠉⠁⠀⠀⠀⠈⠉⠙⠀⠉⠛⠿⣿⣧⣿⣜⣿⣦⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢧⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢀⠖⠁⣠⠔⠉⠀⠀⠀⠀⡠⠄⠐⣒⡤⠬⠭⠉⠉⠤⠴⠮⣿⣿⣿⣿⡿⣇⣤⣄⣀⣀⠀⠀⠠⠤⠄⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⡰⠁⢀⠖⠁⠀⠀⠀⠀⢀⡠⠔⠊⠉⠀⠀⠀⢀⣀⠤⠐⠒⠂⢰⠏⠓⠓⢻⢻⠋⠥⣒⠤⣉⠁⠒⠤⣀⠀⠀⢣⡀⠀⠀⠀⠀⠀⠀⠀
+⢀⠇⣠⠇⠀⠀⠀⠀⡠⠞⠁⠀⠀⠀⣀⠤⠖⠈⠁⠀⠀⠀⠀⠀⡀⠀⠀⠀⠘⡆⢣⠀⠀⠑⢦⡑⠦⡀⠀⠁⠀⠀⠳⡄⠀⠀⠀⠀⠀⠀
+⠸⣰⠁⠀⠀⢀⡴⠋⠀⠀⠀⡠⠔⠋⠀⠀⠀⠀⠀⠀⠀⠀⢀⡴⠻⡀⠀⠀⠀⢱⠀⠱⡀⠀⠀⠘⢦⡈⠢⡀⠀⠀⠀⠘⣆⠀⠀⠀⠀⠀
+⠀⢇⠀⠀⡠⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⡴⠋⠀⢠⣷⠤⣀⡀⠀⢣⣀⡈⠢⡀⠀⠀⠙⠢⣈⠓⢄⠀⠀⠘⡀⠀⠀⠀⠀
+⠀⠸⠀⡰⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⡤⢲⡾⠋⡘⠀⠀⢀⢷⠁⠀⠀⢸⠉⠁⠀⠉⠉⠐⠢⢄⠀⠀⠈⠑⠢⠭⠂⢠⠇⠀⠀⠀⠀
+⠀⢰⢾⣡⠞⠉⠉⠉⠉⠉⠉⠉⠉⠀⠀⡌⠀⠾⠁⢠⠁⠀⠀⡜⡆⠀⠀⢀⠇⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠤⣀⡀⠀⣀⣸⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡀⢸⡇⠀⢸⠀⠀⠀⡇⡇⠀⢀⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠁⠈⠀⠀⢸⠀⠀⠀⡇⠇⠀⡌⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠀⠄⠀⠘⡀⠀⠀⡇⠀⢰⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠱⡄⠀⠀⠀⢣⡀⠀⠸⠀⡟⠓⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠢⣀⠀⠀⠑⠂⣀⣃⢳⡀⡼⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠒⠋⠁⠀⠙⠽⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`;
+
+// Each design comes in several colors. Add a design by adding art and TOOLS entries.
+// Strips blank rows and empty margins so large pasted art is sized and centered by its visible shape.
+function trimArt(s){const L=s.split("\n");while(L.length&&/^[\u2800\s]*$/.test(L[0]))L.shift();while(L.length&&/^[\u2800\s]*$/.test(L[L.length-1]))L.pop();const lead=Math.min(...L.map(r=>r.match(/^[\u2800\s]*/)[0].length));const end=Math.max(...L.map(r=>r.replace(/[\u2800\s]+$/,"").length));return L.map(r=>r.slice(lead,end)).join("\n");}
+
+const FLOWER5 = trimArt(`⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡰⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⢀⣠⢤⡤⡤⠤⣤⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⢾⣥⢻⣿⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⣶⣿⡱⣆⠤⡁⢎⡡⢵⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠆⣾⠸⣿⡎⢿⣿⣶⡀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⡿⢘⣠⠞⡧⣙⠤⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⢸⢿⡇⣿⣿⡘⣿⣿⣿⡀⠀⠀⠀⠀⢠⣼⣿⣿⣿⣿⡿⣃⣿⠣⢤⣤⢛⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡰⢥⣃⣏⣷⡜⣿⣧⠹⣿⣿⣿⡄⠀⠀⣴⣿⣿⣿⣿⣿⣯⢾⣿⣿⣾⡿⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠵⣣⣟⣼⣷⣻⠸⣿⣦⠹⣿⣿⣿⡄⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠭⣘⠻⣿⣧⣿⣾⣧⠘⣿⡿⣹⣽⣿⡟⢿⣿⣿⣿⣿⣿⣿⣿⡧⣼⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠠⠤⡤⢤⠶⡤⣆⣤⡀⡄⠀⠀⠀⠈⠐⠃⢈⠻⢿⣿⣿⡇⠘⡍⡷⢘⣿⣌⡄⠀⣼⣿⣿⣿⣿⣿⡗⠺⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠰⠀⣀⠦⣑⢦⡙⡲⢍⡶⣋⠶⣡⠞⡝⢯⢷⣞⣶⢠⠀⠀⠀⠠⠀⠙⢿⡝⡄⡇⢱⢸⡏⢸⠆⢸⡟⣿⣿⣿⣿⣿⣟⠥⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠆⠀⠌⡄⡙⡘⠎⢷⡩⢏⠶⣩⠳⣡⠛⢬⢣⡍⠺⢞⢇⣾⠿⠆⠀⢎⡀⡄⠙⢡⣎⠞⡘⢿⡐⢀⡟⣲⢻⣿⣿⣿⣿⣏⡅⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠈⠀⢂⠌⡑⢹⣛⢦⠹⢜⡲⡡⠜⡤⢃⠀⠁⠺⢑⢪⣌⢋⣄⠀⠡⠈⠳⣦⠅⠀⠻⡆⠇⣾⡄⢸⠘⢰⣼⣿⣿⣿⡟⠒⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠠⠂⠍⢢⠘⢎⠵⢢⠔⣉⡘⠔⠫⠜⢦⠠⡄⢌⠂⠳⣎⠷⣄⡀⠀⠀⠙⣆⠐⣿⡆⣿⠀⡧⠰⣟⣿⣻⣿⡟⠑⠀⢀⡀⣄⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠒⡄⠉⠎⡔⢃⠎⡱⠌⣙⠒⡆⣆⠀⠈⠃⠙⠀⠙⢼⣉⠷⢦⡐⠢⡘⢆⠙⢿⣿⠐⣱⠿⣀⣡⡶⠇⠀⢀⡐⣤⣻⣽⣯⣿⣶⣥⡄⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠃⡴⢠⢈⡐⠡⠒⠤⡈⢄⡘⢀⠀⠆⡡⠤⣀⣄⠰⠬⠡⢙⡳⢾⣮⣡⢌⠻⠀⡿⠙⡳⢃⠉⠀⠀⠈⣁⢋⠟⡻⠿⣿⣿⣿⣿⣷⣄⡀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠲⢤⠓⣌⠲⠤⣄⣈⢂⠒⡌⢰⡐⠤⡈⢍⡛⡫⢭⣍⣓⢾⣿⣝⢷⠤⠀⠀⠀⠤⢒⡈⣋⢛⡒⠾⠶⣴⣦⣀⡈⠍⠛⢿⣿⣽⢦⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠚⠥⡳⡄⣙⢪⣝⠺⣧⢟⣷⡾⣧⣱⣦⠚⢀⣉⣓⣊⡙⣻⣆⠒⠄⡀⠈⢆⢳⡸⢯⣿⣿⣷⣶⣬⣙⣛⠻⢦⣤⣌⠛⣯⠓⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⣀⠃⠮⢣⡹⢦⣛⠶⠛⠋⠀⢠⣳⡿⠟⠉⡼⢳⢌⡃⠌⠐⠀⠀⠎⠳⡛⠿⠛⡟⠿⠻⠿⢶⣻⠰⢦⡻⣝⢠⠏⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠄⢢⠐⠈⠄⠀⢄⠠⠀⢀⠀⡔⢁⠣⢃⠁⡐⢨⠑⡱⢊⠔⠈⠀⠀⢠⡈⡆⢁⣤⠡⠄⠄⠆⢁⡂⠰⠨⣥⢛⠬⡣⠍⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⢂⠔⠈⣠⢮⡑⠊⠁⠈⠀⡠⠂⣸⠁⠨⠑⡂⢌⠀⢄⢣⣿⢨⠀⠰⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐⠋⠺⠥⠃⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡴⢡⡞⣨⣾⣿⡗⠈⠁⠄⡡⢐⡁⢀⡏⣘⠀⢰⢁⡂⠀⣺⣼⣵⡎⠡⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡸⢡⡗⣰⣿⣿⣿⣼⣷⡏⣄⠣⢠⠂⢸⣷⣿⡀⣿⡘⢇⢲⣿⣿⣿⣏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡏⡟⣰⣿⣿⣿⣿⣿⡿⣟⡽⡂⠧⠀⣾⣿⣿⡟⣿⡇⣾⣿⣿⣿⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡧⢁⣿⡟⣽⣿⣿⣿⡿⣉⡴⠳⠀⠀⣿⣿⣿⣧⢻⣇⢿⢾⣿⣿⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⢻⡼⣽⣿⣿⣿⡿⠓⠈⠀⠀⠀⠀⢸⡟⢿⣿⣟⣿⣷⡌⢹⣿⣿⢿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠄⠻⣜⣿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠘⣿⣼⣿⣿⡿⣽⣷⠀⡟⢿⣽⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠘⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐⢣⡝⣿⣷⣿⣿⣧⠙⣿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠭⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⢾⣿⣿⣷⣿⣿⡄⣻⠆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⠌⠛⠿⡏⠙⠁⠆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`);
+
+const FLOWER6 = trimArt(`⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣿⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡜⢌⣠⠤⠤⣄⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⡟⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⢀⣠⣤⣾⠾⠓⠚⠛⢓⣒⣷⠶⣤⣤⣴⡾⠓⠛⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⣿⢳⣿⣿⡇⠀⠀⠀⠀⣀⡴⠚⠉⠀⠈⠓⠛⠓⢄⠀⣷⠁⠀⢸⣛⣢⡉⠙⠓⠦⣄⡀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⣿⡟⣾⣿⣿⠁⠀⢀⡰⠾⠓⠒⠂⠀⠀⠀⠀⠀⠀⠀⢳⠼⣆⣣⡚⠁⠘⠳⡦⠀⡐⡛⠝⢹⣄⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⢇⣿⣿⡏⠀⣠⣾⡭⠤⠤⠤⣄⡀⠀⠀⠀⠀⢀⡠⠼⣀⠁⠉⠁⠀⠀⠀⠘⡴⡣⡯⢄⡺⠊⠻⣿⢢⡀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⣿⣿⢸⣿⡿⠀⣴⠋⠁⠀⠀⠀⠀⠀⠙⣆⠀⠀⠀⣵⠠⠀⠰⡃⠀⠀⠀⠀⣀⡀⡇⠀⠒⠚⠁⠀⠀⢹⢟⣃⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⡿⣼⡿⠁⡾⠁⠀⠀⠀⠀⠀⠀⢠⠰⠚⠒⠆⡀⠸⠂⡴⡛⠁⠀⠀⠀⣾⢋⠊⢱⡄⠀⠀⠀⠀⠀⢸⡀⢯⠱⡄⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⡇⣿⠃⣸⠃⠀⠀⠀⠀⠀⠀⠀⢰⢠⠀⡀⡘⡇⠀⠀⠀⠀⠀⠀⠀⠐⡿⠘⣠⡞⠁⠀⠀⢀⡔⠦⢏⡀⠸⡤⢡⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣿⣿⡇⡏⢠⡏⠀⠀⢀⠀⠀⠀⡎⠁⠫⠐⠳⠕⠃⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠉⠀⠀⠀⣷⠀⡐⢀⡴⢀⠛⣅⣩⠆
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⣿⣷⡇⣸⠁⣀⠜⠁⠀⠀⣼⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠳⠔⠫⠀⢸⡈⡗⠉⠀
+⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⡇⣿⡸⣍⡤⠒⠉⣽⣿⠑⠢⣄⣀⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡞⠚⠢⠀⠀
+⠀⠹⣿⣷⢶⣤⣀⠀⠀⠀⠀⠀⠀⢿⣧⠿⣽⠏⠀⠀⣸⢻⣿⠀⢠⠺⡀⠊⠪⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⠴⢄⠼⠁⠀
+⠀⠀⠘⣿⣿⣾⣟⡿⣶⣤⣀⠀⠀⠈⢿⣾⣇⠀⠀⢠⡏⣿⡇⠀⠀⢪⠔⣀⢡⠁⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢯⡄⢸⠀⠀⠀
+⠀⠀⠀⠈⢿⣿⣿⣿⣶⣝⡻⣿⣶⣤⣈⢿⣿⡄⠀⢸⣿⣿⠀⠀⠀⠀⠎⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠙⢿⣿⣿⣿⣿⣶⣝⡻⣿⣷⣝⣷⡀⢸⣸⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠙⠿⣿⣿⣿⣿⣿⣮⣟⢿⣿⣿⣼⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠛⠿⣿⣿⣿⣷⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠛⠻⠿⣿⣧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢷⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`);
+
+const TOOLS = [
+  {name:"Pink flower",art:FLOWER,color:"#e0568a"},
+  {name:"Yellow flower",art:FLOWER,color:"#f2b62c"},
+  {name:"Blue flower",art:FLOWER,color:"#6f7ff0"},
+  {name:"Red flower",art:FLOWER,color:"#e8452c"},
+  {name:"White flower",art:FLOWER,color:"#f6f6ee"},
+  {name:"Pastel yellow flower",art:FLOWER,color:"#fff1a8"},
+  {name:"Sage flower",art:FLOWER,color:"#7b8b81"},
+  {name:"Pink bud",art:FLOWER2,color:"#e0568a",scale:0.85},
+  {name:"Yellow bud",art:FLOWER2,color:"#f2b62c",scale:0.85},
+  {name:"Blue bud",art:FLOWER2,color:"#6f7ff0",scale:0.85},
+  {name:"Red bud",art:FLOWER2,color:"#e8452c",scale:0.85},
+  {name:"White bud",art:FLOWER2,color:"#f6f6ee",scale:0.85},
+  {name:"Pastel yellow bud",art:FLOWER2,color:"#fff1a8",scale:0.85},
+  {name:"Sage bud",art:FLOWER2,color:"#7b8b81",scale:0.85},
+  {name:"Pink bloom",art:FLOWER3,color:"#e0568a"},
+  {name:"Yellow bloom",art:FLOWER3,color:"#f2b62c"},
+  {name:"Blue bloom",art:FLOWER3,color:"#6f7ff0"},
+  {name:"Red bloom",art:FLOWER3,color:"#e8452c"},
+  {name:"White bloom",art:FLOWER3,color:"#f6f6ee"},
+  {name:"Pastel yellow bloom",art:FLOWER3,color:"#fff1a8"},
+  {name:"Sage bloom",art:FLOWER3,color:"#7b8b81"},
+  {name:"Pink lily",art:FLOWER4,color:"#e0568a",scale:0.6},
+  {name:"Yellow lily",art:FLOWER4,color:"#f2b62c",scale:0.6},
+  {name:"Blue lily",art:FLOWER4,color:"#6f7ff0",scale:0.6},
+  {name:"Red lily",art:FLOWER4,color:"#e8452c",scale:0.6},
+  {name:"White lily",art:FLOWER4,color:"#f6f6ee",scale:0.6},
+  {name:"Pastel yellow lily",art:FLOWER4,color:"#fff1a8",scale:0.6},
+  {name:"Sage lily",art:FLOWER4,color:"#7b8b81",scale:0.6},
+  {name:"Pink rose",art:FLOWER5,color:"#e0568a",scale:0.5},
+  {name:"Yellow rose",art:FLOWER5,color:"#f2b62c",scale:0.5},
+  {name:"Blue rose",art:FLOWER5,color:"#6f7ff0",scale:0.5},
+  {name:"Red rose",art:FLOWER5,color:"#e8452c",scale:0.5},
+  {name:"White rose",art:FLOWER5,color:"#f6f6ee",scale:0.5},
+  {name:"Pastel yellow rose",art:FLOWER5,color:"#fff1a8",scale:0.5},
+  {name:"Sage rose",art:FLOWER5,color:"#7b8b81",scale:0.5},
+  {name:"Pink orchid",art:FLOWER6,color:"#e0568a",scale:0.5},
+  {name:"Yellow orchid",art:FLOWER6,color:"#f2b62c",scale:0.5},
+  {name:"Blue orchid",art:FLOWER6,color:"#6f7ff0",scale:0.5},
+  {name:"Red orchid",art:FLOWER6,color:"#e8452c",scale:0.5},
+  {name:"White orchid",art:FLOWER6,color:"#f6f6ee",scale:0.5},
+  {name:"Pastel yellow orchid",art:FLOWER6,color:"#fff1a8",scale:0.5},
+  {name:"Sage orchid",art:FLOWER6,color:"#7b8b81",scale:0.5},
+];
+const garden = document.getElementById("garden");
+const ghost = document.getElementById("ghost");
+const status = document.getElementById("status");
+const bar = document.getElementById("bar");
+const placed = []; // stack of placed elements, for undo
+let current = TOOLS[0];
+let erasing = false;
+
+// Build the toolbar by creating and appending buttons
+TOOLS.forEach((t, i) => {
+  if (i && t.art !== TOOLS[i - 1].art) bar.appendChild(Object.assign(document.createElement("span"), {className: "sep"}));
+  const b = document.createElement("button");
+  b.className = "tool";
+  // Show the actual ASCII art, scaled down to fit the button
+  const sw = document.createElement("span");
+  sw.className = "swatch";
+  const art = document.createElement("span");
+  art.textContent = t.art;
+  art.style.setProperty("--c", t.color);
+  const rows = t.art.split("\n");
+  const cols = Math.max(...rows.map(r => r.length));
+  const k = 42 / Math.max(cols * 6.02, rows.length * 10);
+  art.style.transform = "translate(-50%,-50%) scale(" + k.toFixed(3) + ")";
+  sw.appendChild(art);
+  b.appendChild(sw);
+  b.title = t.name;
+  b.setAttribute("aria-label", t.name);
+  b.setAttribute("aria-pressed", i === 0);
+  b.addEventListener("click", () => select(t, b));
+  bar.appendChild(b);
+});
+bar.appendChild(Object.assign(document.createElement("span"), {className: "sep"}));
+const eraseBtn = addAction("Erase", () => {
+  erasing = !erasing;
+  eraseBtn.setAttribute("aria-pressed", erasing);
+  garden.classList.toggle("erasing", erasing);
+  ghost.style.display = "none";
+  say(erasing ? "Erase mode: click a plant to remove it." : "Planting " + current.name.toLowerCase() + ".");
+});
+eraseBtn.setAttribute("aria-pressed", false);
+addAction("Undo", undo);
+addAction("Clear", () => { placed.splice(0).forEach(el => el.remove()); say("Garden cleared. Plant something new."); });
+
+function addAction(label, fn) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.addEventListener("click", fn);
+  bar.appendChild(b);
+  return b;
+}
+function select(t, btn) {
+  current = t;
+  erasing = false;
+  eraseBtn.setAttribute("aria-pressed", false);
+  garden.classList.remove("erasing");
+  bar.querySelectorAll(".tool").forEach(x => x.setAttribute("aria-pressed", x === btn));
+  say("Planting " + t.name.toLowerCase() + ".");
+}
+function say(msg) { status.textContent = msg; }
+function undo() { const el = placed.pop(); if (el) el.remove(); }
+
+// Convert a mouse event into coordinates relative to the garden box
+function localPoint(ev) {
+  const r = garden.getBoundingClientRect();
+  return {x: ev.clientX - r.left, y: ev.clientY - r.top, w: r.width, h: r.height};
+}
+// Items lower in the garden are "closer", so they render bigger
+function sizeFor(t, y, h) {
+  const depth = 0.55 + (y / h) * 0.9;
+  return +(5.5 * depth * (t.scale || 1)).toFixed(1);
+}
+function canPlace(t, p) { return true; }
+
+function plantAt(t, p) {
+  const el = document.createElement("div");
+  el.className = "item" + (t.fly ? " fly" : "");
+  el.style.left = p.x + "px";
+  el.style.top = p.y + "px";
+  el.style.zIndex = Math.round(p.y);
+  el.style.fontSize = (sizeFor(t, p.y, p.h) * (0.9 + Math.random() * 0.25)).toFixed(1) + "px";
+  el.style.setProperty("--c", t.color);
+  el.style.setProperty("--d", (2.5 + Math.random() * 3).toFixed(2) + "s");
+  el.style.setProperty("--l", (-Math.random() * 3).toFixed(2) + "s");
+  const s = document.createElement("span");
+  s.textContent = t.art;
+  el.appendChild(s);
+  garden.appendChild(el);
+  placed.push(el);
+  el.addEventListener("click", ev => {
+    if (!erasing) return;
+    ev.stopPropagation();
+    el.remove();
+    const i = placed.indexOf(el);
+    if (i > -1) placed.splice(i, 1);
+  });
+}
+
+garden.addEventListener("click", ev => {
+  if (erasing) return;
+  const p = localPoint(ev);
+  if (!canPlace(current, p)) { say("Flowers grow in the soil. Click lower down."); return; }
+  plantAt(current, p);
+  say(placed.length + (placed.length === 1 ? " flowers" : " flowers") + " in the garden. ");
+});
+
+// Ghost preview follows the pointer
+garden.addEventListener("mousemove", ev => {
+  if (erasing) return;
+  const p = localPoint(ev);
+  ghost.className = "item" + (current.fly ? " fly" : "");
+  ghost.style.display = canPlace(current, p) ? "block" : "none";
+  ghost.style.left = p.x + "px";
+  ghost.style.top = p.y + "px";
+  ghost.style.fontSize = sizeFor(current, p.y, p.h) + "px";
+  ghost.firstChild.textContent = current.art;
+  ghost.style.setProperty("--c", current.color);
+});
+garden.addEventListener("mouseleave", () => { ghost.style.display = "none"; });
+
+document.addEventListener("keydown", ev => {
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") { ev.preventDefault(); undo(); }
+});
+</script>
+</body>
+</html>
